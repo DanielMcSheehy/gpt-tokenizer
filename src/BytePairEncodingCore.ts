@@ -226,6 +226,28 @@ export class BytePairEncodingCore {
     return tokensArray
   }
 
+  /**
+   * Counts the tokens of a single pre-split piece of text, using the same
+   * single-token fast path and merge cache as the encode/count methods.
+   * Additive helper for incremental token counters.
+   */
+  countPiece(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+
+    return this.bytePairEncode(piece).length
+  }
+
+  /**
+   * The token split regex used to divide text into pieces before BPE encoding.
+   * Additive helper for incremental token counters.
+   */
+  getSplitTokenRegex(): RegExp {
+    return this.tokenSplitRegex
+  }
+
   countNative(text: string, allowedSpecial?: Set<string>): number {
     let startIndex = 0
     let tokensCount = 0

@@ -529,6 +529,46 @@ export class GptEncoding {
     return count
   }
 
+  /**
+   * Counts the tokens of a single pre-split piece of text.
+   * Additive helper for incremental token counters.
+   */
+  countPieceTokens(piece: string): number {
+    return this.bytePairEncodingCoreProcessor.countPiece(piece)
+  }
+
+  /**
+   * The token split regex this encoding uses to divide text into pieces.
+   * Additive helper for incremental token counters.
+   */
+  getSplitTokenRegex(): RegExp {
+    return this.bytePairEncodingCoreProcessor.getSplitTokenRegex()
+  }
+
+  /**
+   * The disallowed special-token pattern the default policy of
+   * {@link GptEncoding.countTokens} enforces, together with the length of the
+   * longest special token, so callers can scan just a window around an edit.
+   * Additive helper for incremental token counters.
+   */
+  getDisallowedSpecialTokens():
+    | { regex: RegExp; maxTokenLength: number }
+    | undefined {
+    const { regexPattern } = this.defaultSpecialTokenConfig
+    if (!regexPattern) {
+      return undefined
+    }
+    let maxTokenLength = 0
+    for (const token of this.specialTokensSet) {
+      if (token.length > maxTokenLength) {
+        maxTokenLength = token.length
+      }
+    }
+    return maxTokenLength > 0
+      ? { regex: regexPattern, maxTokenLength }
+      : undefined
+  }
+
   private countStringTokens(text: string): number {
     if (!text) {
       return 0
