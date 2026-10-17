@@ -109,6 +109,12 @@ export class GptEncoding {
   private specialTokensSet: Set<string>
   private allSpecialTokenRegex: RegExp
   private defaultSpecialTokenConfig: SpecialTokenConfig
+  /**
+   * Every default-disallowed special token contains this substring, so a
+   * failed `includes` check is exactly "no disallowed special". Undefined
+   * when some token does not contain it and the regex must always run.
+   */
+  private readonly disallowedSpecialMarker: string | undefined
   private chatFormatter: ChatFormatter
 
   countChatCompletionTokens?: (request: ChatCompletionRequest) => number
@@ -134,6 +140,12 @@ export class GptEncoding {
       ...rest,
     })
     this.defaultSpecialTokenConfig = this.processSpecialTokens()
+    const specialTokenList = [...this.specialTokensSet]
+    this.disallowedSpecialMarker =
+      specialTokenList.length > 0 &&
+      specialTokenList.every((token) => token.includes('<|'))
+        ? '<|'
+        : undefined
 
     const maxTokenValue = Math.max(
       mergeableBytePairRanks.length - 1,
@@ -170,6 +182,10 @@ export class GptEncoding {
     this.encodeChat = this.encodeChat.bind(this)
     this.encodeChatGenerator = this.encodeChatGenerator.bind(this)
     this.countTokens = this.countTokens.bind(this)
+    this.matchDisallowedSpecialToken =
+      this.matchDisallowedSpecialToken.bind(this)
+    this.splitTokenPieces = this.splitTokenPieces.bind(this)
+    this.countTokenizedPiece = this.countTokenizedPiece.bind(this)
     this.setMergeCacheSize = this.setMergeCacheSize.bind(this)
     this.clearMergeCache = this.clearMergeCache.bind(this)
     this.estimateCost = this.estimateCost.bind(this)
@@ -701,5 +717,37 @@ export class GptEncoding {
     }
 
     return result
+  }
+
+  /**
+   * Disallowed special token under the default `countTokens` policy.
+   * Returns undefined when that call would not throw.
+   */
+  matchDisallowedSpecialToken(text: string): string | undefined {
+    const pattern = this.defaultSpecialTokenConfig.regexPattern
+    if (!pattern) return undefined
+    if (
+      this.disallowedSpecialMarker !== undefined &&
+      !text.includes(this.disallowedSpecialMarker)
+    ) {
+      return undefined
+    }
+    return text.match(pattern)?.[0]
+  }
+
+  /**
+   * Pieces from this encoding's token-split regex. Incremental counting
+   * runs this on the same segment `countNative` would see.
+   */
+  splitTokenPieces(text: string): string[] {
+    return this.bytePairEncodingCoreProcessor.splitTokenPieces(text)
+  }
+
+  /**
+   * Token count of one piece already produced by `splitTokenPieces`.
+   * Same path as the inner loop of `countNative`.
+   */
+  countTokenizedPiece(piece: string): number {
+    return this.bytePairEncodingCoreProcessor.countTokenizedPiece(piece)
   }
 }

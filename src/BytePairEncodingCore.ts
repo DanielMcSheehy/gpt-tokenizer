@@ -122,6 +122,29 @@ export class BytePairEncodingCore {
     this.mergeCache?.clear()
   }
 
+  /**
+   * Splits `text` with the encoding token-split regex. `lastIndex` is
+   * restored so a later `countNative` still scans from the start.
+   */
+  splitTokenPieces(text: string): string[] {
+    const pieces: string[] = []
+    this.tokenSplitRegex.lastIndex = 0
+    for (const match of text.matchAll(this.tokenSplitRegex)) {
+      pieces.push(match[0])
+    }
+    this.tokenSplitRegex.lastIndex = 0
+    return pieces
+  }
+
+  /**
+   * Token count of one already-split piece. Direct vocab hits count as
+   * one token; everything else uses the existing BPE merge path.
+   */
+  countTokenizedPiece(piece: string): number {
+    if (this.getBpeRankFromString(piece) !== undefined) return 1
+    return this.bytePairEncode(piece).length
+  }
+
   *encodeNativeGenerator(
     text: string,
     allowedSpecial?: Set<string>,
