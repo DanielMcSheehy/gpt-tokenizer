@@ -529,6 +529,35 @@ export class GptEncoding {
     return count
   }
 
+  /**
+   * Returns the regex that splits segments between special tokens into
+   * BPE-encodable pieces. Additive helper for incremental token counters
+   * (src/incremental/), which lex pieces themselves.
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.bytePairEncodingCoreProcessor.getTokenSplitRegex()
+  }
+
+  /**
+   * Counts the tokens of a single split-regex piece using the same lookup
+   * order as countNative's inner loop. Additive helper for incremental token
+   * counters.
+   */
+  countSplitPieceTokens(piece: string): number {
+    return this.bytePairEncodingCoreProcessor.countPieceTokens(piece)
+  }
+
+  /**
+   * Returns the regex matching special tokens that are disallowed under the
+   * default encode options — the same regex countTokens matches the input
+   * against before counting — or undefined when none are disallowed.
+   * Additive helper for incremental token counters, so they can mirror
+   * countTokens' error behavior.
+   */
+  getDefaultDisallowedSpecialTokenRegex(): RegExp | undefined {
+    return this.defaultSpecialTokenConfig.regexPattern
+  }
+
   private countStringTokens(text: string): number {
     if (!text) {
       return 0

@@ -275,6 +275,27 @@ export class BytePairEncodingCore {
     return tokensCount
   }
 
+  /**
+   * Returns the regex used to split segments between special tokens into
+   * BPE-encodable pieces. Additive helper for incremental token counters.
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.tokenSplitRegex
+  }
+
+  /**
+   * Counts the tokens of a single split-regex piece using the same lookup
+   * order as the inner loop of `countNative`. Additive helper for incremental
+   * token counters, which re-derive pieces themselves and reuse this count.
+   */
+  countPieceTokens(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(piece).length
+  }
+
   *decodeNativeGenerator(
     tokens: Iterable<number>,
   ): Generator<Uint8Array | string, void, void> {
