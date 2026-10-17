@@ -108,6 +108,27 @@ export class BytePairEncodingCore {
     }
   }
 
+  /**
+   * Additive helper for incremental token counters (src/incremental/).
+   * Returns the regex countNative uses to split segments into pieces.
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.tokenSplitRegex
+  }
+
+  /**
+   * Additive helper for incremental token counters (src/incremental/).
+   * Counts the tokens of a single split piece exactly like countNative does.
+   */
+  countPieceTokens(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+
+    return this.bytePairEncode(piece).length
+  }
+
   setMergeCacheSize(newSize: number): void {
     if (this.mergeCacheSize === 0 && newSize > 0) {
       this.mergeCache = new Map()

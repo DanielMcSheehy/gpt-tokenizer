@@ -545,6 +545,25 @@ export class GptEncoding {
     )
   }
 
+  /**
+   * Additive helper for incremental token counters (src/incremental/).
+   * Exposes the pieces `countTokens` (default special-token policy) is made of:
+   * the scan used to reject disallowed special tokens, the split regex, and a
+   * per-piece token counter mirroring countNative's per-piece logic.
+   */
+  getIncrementalCountingSupport(): {
+    specialTokensScan: RegExp
+    tokenSplitRegex: RegExp
+    countPieceTokens: (piece: string) => number
+  } {
+    return {
+      specialTokensScan: this.allSpecialTokenRegex,
+      tokenSplitRegex: this.bytePairEncodingCoreProcessor.getTokenSplitRegex(),
+      countPieceTokens: (piece: string) =>
+        this.bytePairEncodingCoreProcessor.countPieceTokens(piece),
+    }
+  }
+
   setMergeCacheSize(size: number): void {
     this.bytePairEncodingCoreProcessor.setMergeCacheSize(size)
   }
