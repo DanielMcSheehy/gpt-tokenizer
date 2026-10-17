@@ -549,6 +549,25 @@ export class GptEncoding {
     this.bytePairEncodingCoreProcessor.setMergeCacheSize(size)
   }
 
+  /**
+   * Additive introspection helper for incremental token counting utilities.
+   * Returns the regex used to split text into BPE pieces for this encoding.
+   * Does not affect encoding behavior; callers must not mutate the shared
+   * regex (in particular its `lastIndex`).
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.bytePairEncodingCoreProcessor.getTokenSplitRegex()
+  }
+
+  /**
+   * Additive introspection helper for incremental token counting utilities.
+   * Returns the set of special tokens recognized by this encoding.
+   * Does not affect encoding behavior; the returned set must not be mutated.
+   */
+  getSpecialTokens(): ReadonlySet<string> {
+    return this.specialTokensSet
+  }
+
   clearMergeCache(): void {
     this.bytePairEncodingCoreProcessor.clearMergeCache()
   }

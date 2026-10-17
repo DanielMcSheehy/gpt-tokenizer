@@ -118,6 +118,15 @@ export class BytePairEncodingCore {
     }
   }
 
+  /**
+   * Additive introspection helper: exposes the regex used to split text into
+   * BPE pieces. Intended for incremental counting utilities; callers must not
+   * mutate the shared regex (in particular its `lastIndex`).
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.tokenSplitRegex
+  }
+
   clearMergeCache(): void {
     this.mergeCache?.clear()
   }
