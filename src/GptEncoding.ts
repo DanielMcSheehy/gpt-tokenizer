@@ -545,6 +545,25 @@ export class GptEncoding {
     )
   }
 
+  /**
+   * Returns the internal BPE core processor.
+   *
+   * Additive helper for incremental token counting; does not alter existing behavior.
+   */
+  getBytePairEncodingCore(): BytePairEncodingCore {
+    return this.bytePairEncodingCoreProcessor
+  }
+
+  /**
+   * Returns the special tokens in encoder insertion order — the same order
+   * used to build the default disallowed-special-token regex.
+   *
+   * Additive helper for incremental token counting; does not alter existing behavior.
+   */
+  getSpecialTokenStrings(): readonly string[] {
+    return [...this.specialTokensEncoder.keys()]
+  }
+
   setMergeCacheSize(size: number): void {
     this.bytePairEncodingCoreProcessor.setMergeCacheSize(size)
   }

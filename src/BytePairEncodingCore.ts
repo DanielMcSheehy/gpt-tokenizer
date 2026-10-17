@@ -226,6 +226,31 @@ export class BytePairEncodingCore {
     return tokensArray
   }
 
+  /**
+   * Returns a private clone of the token split regex. The clone may be used
+   * with stateful `lastIndex` operations (exec loops) without affecting the
+   * shared instance used by the encode/count paths.
+   *
+   * Additive helper for incremental token counting; does not alter existing behavior.
+   */
+  createTokenSplitRegexClone(): RegExp {
+    return new RegExp(this.tokenSplitRegex.source, this.tokenSplitRegex.flags)
+  }
+
+  /**
+   * Counts the tokens of a single pre-split regex piece, exactly like the
+   * per-match body of `encodeNative`/`countNative`.
+   *
+   * Additive helper for incremental token counting; does not alter existing behavior.
+   */
+  countPieceTokens(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(piece).length
+  }
+
   countNative(text: string, allowedSpecial?: Set<string>): number {
     let startIndex = 0
     let tokensCount = 0
