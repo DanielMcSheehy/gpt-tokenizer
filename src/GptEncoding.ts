@@ -537,6 +537,28 @@ export class GptEncoding {
     return this.bytePairEncodingCoreProcessor.countNative(text)
   }
 
+  /**
+   * Additive helper for incremental counting. Same per-piece BPE counts as
+   * `countNative` on one special-token segment. Does not apply the
+   * special-token policy.
+   */
+  countTokenPieces(segment: string): { end: number; tokens: number }[] {
+    return this.bytePairEncodingCoreProcessor.countTokenPieces(segment)
+  }
+
+  /**
+   * First disallowed special token under the default `countTokens` policy.
+   * Undefined when that policy would accept `text`.
+   */
+  matchDefaultDisallowedSpecial(text: string): string | undefined {
+    const pattern = this.defaultSpecialTokenConfig.regexPattern
+    if (!pattern) {
+      return undefined
+    }
+    const match = text.match(pattern)
+    return match?.[0]
+  }
+
   private countChatCompletionTokensInternal(
     request: ChatCompletionRequest,
   ): number {

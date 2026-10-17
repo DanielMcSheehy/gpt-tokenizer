@@ -44,6 +44,7 @@ export class BytePairEncodingCore {
    */
   private bytePairStringRankEncoder: Map<string, number>
   private tokenSplitRegex: RegExp
+  private pieceSplitRegex: RegExp
   private specialTokensEncoder: Map<string, number>
   private specialTokensDecoder: Map<number, string>
   private specialTokenPatternRegex: RegExp
@@ -96,6 +97,11 @@ export class BytePairEncodingCore {
       ? new Map([...specialTokensEncoder].map(([key, value]) => [value, key]))
       : new Map<number, string>()
     this.tokenSplitRegex = tokenSplitRegex
+    // Dedicated copy so incremental piece scans never disturb countNative's regex.
+    this.pieceSplitRegex = new RegExp(
+      tokenSplitRegex.source,
+      tokenSplitRegex.flags,
+    )
 
     const escapedSpecialTokens = [...this.specialTokensEncoder.keys()].map(
       escapeRegExp,
@@ -275,6 +281,25 @@ export class BytePairEncodingCore {
     return tokensCount
   }
 
+  /**
+   * Split `segment` the same way `countNative` splits text between special
+   * tokens, and return each piece's end offset plus its BPE token count.
+   * Pieces partition `segment`. Does not scan special tokens.
+   */
+  countTokenPieces(segment: string): { end: number; tokens: number }[] {
+    const pieces: { end: number; tokens: number }[] = []
+    this.pieceSplitRegex.lastIndex = 0
+    for (const match of segment.matchAll(this.pieceSplitRegex)) {
+      const piece = match[0]
+      const start = match.index ?? 0
+      pieces.push({
+        end: start + piece.length,
+        tokens: this.countMergedPiece(piece),
+      })
+    }
+    return pieces
+  }
+
   *decodeNativeGenerator(
     tokens: Iterable<number>,
   ): Generator<Uint8Array | string, void, void> {
@@ -324,6 +349,14 @@ export class BytePairEncodingCore {
         yield tokenBytesOrString
       }
     }
+  }
+
+  private countMergedPiece(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(piece).length
   }
 
   private getBpeRankFromString(key: string): number | undefined {
