@@ -9,6 +9,17 @@ import { escapeRegExp } from './util.js'
 
 export type RawBytePairRanks = readonly (string | readonly number[])[]
 
+/** One regex piece or special token as walked by countNative. */
+export interface CountingSpan {
+  start: number
+  end: number
+  text: string
+  count: number
+  kind: 'bpe' | 'special'
+  /** End of the special-token segment this BPE piece belongs to (exclusive). */
+  segmentEnd: number
+}
+
 export interface BytePairEncodingConfig {
   bytePairRankDecoder: RawBytePairRanks
   specialTokensEncoder?: Map<string, number>
@@ -273,6 +284,98 @@ export class BytePairEncodingCore {
     }
 
     return tokensCount
+  }
+
+  /**
+   * Additive helper for incremental counting: same pieces countNative walks,
+   * with UTF-16 offsets and per-piece token counts.
+   */
+  enumerateCountingSpans(
+    text: string,
+    allowedSpecial?: Set<string>,
+  ): CountingSpan[] {
+    const spans: CountingSpan[] = []
+    let startIndex = 0
+
+    while (true) {
+      const nextSpecialMatch = this.findNextSpecialToken(
+        text,
+        allowedSpecial,
+        startIndex,
+      )
+      const nextSpecialStartIndex = nextSpecialMatch?.[0]
+      const endIndex = nextSpecialStartIndex ?? text.length
+
+      const textBeforeSpecial =
+        startIndex === 0 && endIndex === text.length
+          ? text
+          : text.slice(startIndex, endIndex)
+
+      for (const match of textBeforeSpecial.matchAll(this.tokenSplitRegex)) {
+        const piece = match[0]
+        const pieceStart = startIndex + (match.index ?? 0)
+        spans.push({
+          start: pieceStart,
+          end: pieceStart + piece.length,
+          text: piece,
+          count: this.countSinglePiece(piece),
+          kind: 'bpe',
+          segmentEnd: endIndex,
+        })
+      }
+
+      if (nextSpecialStartIndex !== undefined) {
+        const specialToken = nextSpecialMatch![1]
+        const specialTokenValue = this.specialTokensEncoder.get(specialToken)
+        if (specialTokenValue === undefined) {
+          throw new Error(
+            `Special token "${specialToken}" is not in the special token encoder.`,
+          )
+        }
+        spans.push({
+          start: nextSpecialStartIndex,
+          end: nextSpecialStartIndex + specialToken.length,
+          text: specialToken,
+          count: 1,
+          kind: 'special',
+          segmentEnd: nextSpecialStartIndex + specialToken.length,
+        })
+        startIndex = nextSpecialStartIndex + specialToken.length
+      } else {
+        break
+      }
+    }
+
+    return spans
+  }
+
+  /**
+   * Split one already-isolated special-token segment without BPE-counting.
+   * `absoluteOffset` is the UTF-16 index of `segmentText` within the full string.
+   */
+  splitSegmentPieces(
+    segmentText: string,
+    absoluteOffset: number,
+  ): { start: number; end: number; text: string }[] {
+    const pieces: { start: number; end: number; text: string }[] = []
+    for (const match of segmentText.matchAll(this.tokenSplitRegex)) {
+      const piece = match[0]
+      const pieceStart = absoluteOffset + (match.index ?? 0)
+      pieces.push({
+        start: pieceStart,
+        end: pieceStart + piece.length,
+        text: piece,
+      })
+    }
+    return pieces
+  }
+
+  countSinglePiece(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(piece).length
   }
 
   *decodeNativeGenerator(

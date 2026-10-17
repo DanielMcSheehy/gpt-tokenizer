@@ -1,4 +1,9 @@
-import { BytePairEncodingCore, decoder } from './BytePairEncodingCore.js'
+import {
+  BytePairEncodingCore,
+  decoder,
+  type CountingSpan,
+} from './BytePairEncodingCore.js'
+export type { CountingSpan } from './BytePairEncodingCore.js'
 import { ALL_SPECIAL_TOKENS } from './constants.js'
 import {
   type ChatCompletionRequest,
@@ -527,6 +532,43 @@ export class GptEncoding {
       count += tokens.length
     }
     return count
+  }
+
+  /**
+   * Additive helper for incremental counters: enumerate the same spans
+   * countTokens would process under the default special-token policy.
+   */
+  enumerateCountingSpans(text: string): CountingSpan[] {
+    const specialTokenConfig = this.defaultSpecialTokenConfig
+    if (specialTokenConfig.regexPattern) {
+      const match = text.match(specialTokenConfig.regexPattern)
+      if (match !== null) {
+        throw new Error(`Disallowed special token found: ${match[0]}`)
+      }
+    }
+    return this.bytePairEncodingCoreProcessor.enumerateCountingSpans(
+      text,
+      specialTokenConfig.allowedSpecial,
+    )
+  }
+
+  /**
+   * Additive helper: split one special-token segment the same way countNative does
+   * (regex only, no BPE).
+   */
+  splitSegmentPieces(
+    segmentText: string,
+    absoluteOffset: number,
+  ): { start: number; end: number; text: string }[] {
+    return this.bytePairEncodingCoreProcessor.splitSegmentPieces(
+      segmentText,
+      absoluteOffset,
+    )
+  }
+
+  /** Additive helper: token count for one already-split BPE piece. */
+  countSinglePiece(piece: string): number {
+    return this.bytePairEncodingCoreProcessor.countSinglePiece(piece)
   }
 
   private countStringTokens(text: string): number {
