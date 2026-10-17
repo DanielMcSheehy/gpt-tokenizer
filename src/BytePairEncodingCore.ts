@@ -122,6 +122,23 @@ export class BytePairEncodingCore {
     this.mergeCache?.clear()
   }
 
+  /**
+   * Token count of one split piece, using the same rank lookup and merge
+   * cache as `countNative`. Does not scan for special tokens.
+   */
+  countMergePiece(input: string): number {
+    const token = this.getBpeRankFromString(input)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(input).length
+  }
+
+  /** Fresh copy so callers can scan without touching the shared global regex. */
+  createTokenSplitRegex(): RegExp {
+    return new RegExp(this.tokenSplitRegex.source, this.tokenSplitRegex.flags)
+  }
+
   *encodeNativeGenerator(
     text: string,
     allowedSpecial?: Set<string>,

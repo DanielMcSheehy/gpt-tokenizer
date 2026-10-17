@@ -529,6 +529,27 @@ export class GptEncoding {
     return count
   }
 
+  /**
+   * Additive helpers for incremental counting. They do not change
+   * `encode`, `countTokens`, or `isWithinTokenLimit`.
+   */
+  createTokenSplitRegex(): RegExp {
+    return this.bytePairEncodingCoreProcessor.createTokenSplitRegex()
+  }
+
+  countMergePiece(piece: string): number {
+    return this.bytePairEncodingCoreProcessor.countMergePiece(piece)
+  }
+
+  /**
+   * Regex whose `String#match` result matches the default `countTokens`
+   * disallowed-special check. Undefined when the default policy allows
+   * every special token.
+   */
+  defaultDisallowedSpecialRegex(): RegExp | undefined {
+    return this.defaultSpecialTokenConfig.regexPattern
+  }
+
   private countStringTokens(text: string): number {
     if (!text) {
       return 0
