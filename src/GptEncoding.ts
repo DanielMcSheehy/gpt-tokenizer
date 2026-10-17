@@ -549,6 +549,30 @@ export class GptEncoding {
     this.bytePairEncodingCoreProcessor.setMergeCacheSize(size)
   }
 
+  /**
+   * Internals needed to build an incremental token counter (src/incremental)
+   * that matches `countTokens` under the default special-token policy.
+   * Purely additive: existing method results are unchanged.
+   */
+  getIncrementalCountingSupport(): {
+    tokenSplitRegex: RegExp
+    countPiece: (piece: string) => number
+    disallowedSpecialRegex: RegExp | undefined
+    maxSpecialTokenLength: number
+  } {
+    let maxSpecialTokenLength = 0
+    this.specialTokensSet.forEach((token) => {
+      maxSpecialTokenLength = Math.max(maxSpecialTokenLength, token.length)
+    })
+    return {
+      tokenSplitRegex: this.bytePairEncodingCoreProcessor.getTokenSplitRegex(),
+      countPiece: (piece: string) =>
+        this.bytePairEncodingCoreProcessor.countPieceTokens(piece),
+      disallowedSpecialRegex: this.defaultSpecialTokenConfig.regexPattern,
+      maxSpecialTokenLength,
+    }
+  }
+
   clearMergeCache(): void {
     this.bytePairEncodingCoreProcessor.clearMergeCache()
   }

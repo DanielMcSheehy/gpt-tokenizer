@@ -118,6 +118,27 @@ export class BytePairEncodingCore {
     }
   }
 
+  /**
+   * The regex used to split special-token-free text into BPE pieces.
+   * Additive read-only accessor for incremental token counters.
+   */
+  getTokenSplitRegex(): RegExp {
+    return this.tokenSplitRegex
+  }
+
+  /**
+   * Token count of a single piece produced by the split regex, i.e. the
+   * per-match logic of `countNative` without special-token handling.
+   * Additive helper for incremental token counters.
+   */
+  countPieceTokens(piece: string): number {
+    const token = this.getBpeRankFromString(piece)
+    if (token !== undefined) {
+      return 1
+    }
+    return this.bytePairEncode(piece).length
+  }
+
   clearMergeCache(): void {
     this.mergeCache?.clear()
   }
